@@ -47,7 +47,7 @@ const WriteArticle = () => {
       <div className="flex flex-col xl:flex-row gap-8 items-start">
         
         {/* Left Column: Configuration */}
-        <div className="w-full xl:w-[400px] flex-shrink-0 bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 p-6 sm:p-8">
+        <div className="w-full xl:w-[400px] flex-shrink-0 bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 p-6 sm:p-8 h-auto xl:h-[calc(100vh-160px)]">
           <div className="flex items-center gap-3 mb-8">
             <div className="w-10 h-10 rounded-xl bg-blue-100 dark:bg-blue-900/50 text-blue-600 flex items-center justify-center">
               <Sparkles className="w-5 h-5" />

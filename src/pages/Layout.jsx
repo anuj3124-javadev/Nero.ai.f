@@ -33,7 +33,15 @@ const Layout = () => {
         </div>
       </nav>
       <div className='flex-1 w-full flex relative'>
-        <div className="sticky top-14 h-[calc(100vh-56px)] z-10">
+        {/* Mobile Sidebar Backdrop */}
+        {sidebar && (
+          <div 
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 sm:hidden"
+            onClick={() => setSidebar(false)}
+          />
+        )}
+        
+        <div className="sticky top-14 h-[calc(100vh-56px)] z-40">
           <Sidebar sidebar={sidebar} setSidebar={setSidebar}/>
         </div>
         <div className='flex-1 bg-[#F4F7FB] dark:bg-gray-950 min-h-screen pt-4'>

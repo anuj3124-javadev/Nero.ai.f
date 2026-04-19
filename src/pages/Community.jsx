@@ -69,14 +69,14 @@ const Community = () => {
   }, []);
 
   return (
-    <div className='min-h-screen bg-gray-50 dark:bg-gray-950 p-6 transition-colors duration-300'>
+    <div className='min-h-screen bg-gray-50 dark:bg-gray-950 p-4 sm:p-6 transition-colors duration-300 pb-20'>
       <div className="max-w-7xl mx-auto">
-        <header className="mb-12">
-          <div className="flex items-center gap-3 mb-2">
-            <Share2 className="w-8 h-8 text-primary" />
-            <h1 className='text-3xl font-black dark:text-white tracking-tight uppercase italic'>Community Showcase</h1>
+        <header className="mb-10">
+          <div className="flex items-center gap-3 mb-3">
+            <Share2 className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
+            <h1 className='text-2xl sm:text-3xl font-black dark:text-white tracking-tight uppercase italic'>Community Gallery</h1>
           </div>
-          <p className="text-gray-500 dark:text-gray-400">Explore and be inspired by art created by the Nero AI family.</p>
+          <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Explore and be inspired by art created by the Nero AI family.</p>
         </header>
 
         {loading ? (

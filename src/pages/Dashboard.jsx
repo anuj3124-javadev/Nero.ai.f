@@ -36,10 +36,10 @@ const Dashboard = () => {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-6 transition-colors duration-300">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 p-4 sm:p-6 transition-colors duration-300 pb-20">
       <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-black dark:text-white mb-8 tracking-tight uppercase italic flex items-center gap-3">
-          <LayoutGrid className="text-primary w-8 h-8" /> User Dashboard
+        <h1 className="text-2xl sm:text-3xl font-black dark:text-white mb-8 tracking-tight uppercase italic flex items-center gap-3">
+          <LayoutGrid className="text-primary w-6 h-6 sm:w-8 sm:h-8" /> Dashboard
         </h1>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">

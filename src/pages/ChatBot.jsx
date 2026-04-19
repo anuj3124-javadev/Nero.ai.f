@@ -159,14 +159,14 @@ const ChatBot = () => {
             <div className="flex flex-col xl:flex-row gap-8 items-start h-full">
                 
                 {/* Left Column: Recent Chats Sidebar Card */}
-                <div className="w-full xl:w-[350px] flex-shrink-0 bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 p-6 sm:p-8 flex flex-col h-auto xl:h-[calc(100vh-160px)]">
-                    <div className="flex items-center gap-3 mb-8">
+                <div className="w-full xl:w-[350px] flex-shrink-0 bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 p-6 sm:p-8 flex flex-col h-auto xl:h-[calc(100vh-160px)] max-h-[400px] xl:max-h-none">
+                    <div className="flex items-center gap-3 mb-8 px-1">
                         <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
                             <History className="w-5 h-5" />
                         </div>
                         <div>
                             <h2 className="text-xl font-bold dark:text-white">Recent Chats</h2>
-                            <p className="text-gray-500 text-xs">Separate conversational threads.</p>
+                            <p className="text-gray-500 text-[10px] uppercase tracking-wider font-bold opacity-60">Resume Session</p>
                         </div>
                     </div>
 
@@ -234,7 +234,7 @@ const ChatBot = () => {
                 </div>
 
                 {/* Right Column: Chat Main Card */}
-                <div className="flex-1 w-full bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 flex flex-col h-[calc(100vh-160px)]">
+                <div className="flex-1 w-full bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 flex flex-col h-auto min-h-[500px] xl:h-[calc(100vh-160px)]">
                     
                     {/* Header */}
                     <div className="p-5 border-b dark:border-gray-800 flex items-center justify-between bg-gray-50/30 dark:bg-gray-900/30">
