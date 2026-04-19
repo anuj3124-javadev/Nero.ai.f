@@ -10,10 +10,10 @@ const ChatBot = () => {
         { role: 'assistant', content: 'Hello! I am Nero AI. How can I assist you today?' }
     ]);
     const [history, setHistory] = useState([]);
-    const [rawHistory, setRawHistory] = useState([]);
+    const [allMessages, setAllMessages] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
-    const [activeSessionId, setActiveSessionId] = useState(null);
+    const [activeThreadId, setActiveThreadId] = useState(null);
     const { getToken } = useAuth();
     const chatEndRef = useRef(null);
     const isInitialMount = useRef(true);
@@ -30,8 +30,8 @@ const ChatBot = () => {
             });
 
             if (data.success) {
-                setRawHistory(data.history); // Keep original order for filtering
-                setHistory([...data.history].reverse()); // Newest first for sidebar
+                setHistory(data.history); // The latest message of each thread
+                setAllMessages(data.allMessages); // Every single message for reconstruction
             }
         } catch (error) {
             console.error('Error fetching chat history:', error);
@@ -51,22 +51,34 @@ const ChatBot = () => {
         }
     }, [messages]);
 
-    const selectSession = (selectedItem) => {
-        setActiveSessionId(selectedItem.id);
+    const selectThread = (threadItem) => {
+        const threadId = threadItem.thread_id;
+        setActiveThreadId(threadId);
         
-        // Find all history items up to and including the selected one
-        const sessionMessages = [];
-        for (const item of rawHistory) {
-            sessionMessages.push({ role: 'user', content: item.prompt });
-            sessionMessages.push({ role: 'assistant', content: item.content });
-            if (item.id === selectedItem.id) break;
+        // Find all messages belonging to this thread (or legacy item)
+        let sessionMessages = [];
+        if (threadId) {
+            // Filter all messages that share this thread_id
+            const threadMessages = allMessages.filter(msg => msg.thread_id === threadId).reverse();
+            threadMessages.forEach(item => {
+                sessionMessages.push({ role: 'user', content: item.prompt });
+                sessionMessages.push({ role: 'assistant', content: item.content });
+            });
+        } else {
+            // Legacy handling: reconstruct history up to this specific item
+            for (let i = allMessages.length - 1; i >= 0; i--) {
+                const item = allMessages[i];
+                sessionMessages.push({ role: 'user', content: item.prompt });
+                sessionMessages.push({ role: 'assistant', content: item.content });
+                if (item.id === threadItem.id) break;
+            }
         }
 
         setMessages([
-            { role: 'assistant', content: 'Continuing conversation from history...' },
+            { role: 'assistant', content: 'Resuming your conversation...' },
             ...sessionMessages
         ]);
-        toast.success('Session reloaded');
+        toast.success('Conversation resumed');
     };
 
     const handleSend = async (e) => {
@@ -82,12 +94,13 @@ const ChatBot = () => {
         try {
             const token = await getToken();
             const { data } = await axios.post('/api/ai/chat', 
-                { messages: newMessages },
+                { messages: newMessages, threadId: activeThreadId },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
             if (data.success) {
                 setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+                setActiveThreadId(data.threadId); // Store the threadId (useful if it was a new chat)
                 fetchHistory(); 
             } else {
                 toast.error(data.message);
@@ -101,7 +114,7 @@ const ChatBot = () => {
 
     const startNewChat = () => {
         setMessages([{ role: 'assistant', content: 'New session started. How can I help you now?' }]);
-        setActiveSessionId(null);
+        setActiveThreadId(null);
         toast.success('New chat started');
     };
 
@@ -114,8 +127,8 @@ const ChatBot = () => {
             });
 
             if (data.success) {
-                setRawHistory([]);
                 setHistory([]);
+                setAllMessages([]);
                 startNewChat();
                 toast.success('History cleared');
             }
@@ -133,9 +146,7 @@ const ChatBot = () => {
             });
 
             if (data.success) {
-                setHistory(prev => prev.filter(item => item.id !== id));
-                setRawHistory(prev => prev.filter(item => item.id !== id));
-                if (activeSessionId === id) setActiveSessionId(null);
+                fetchHistory();
                 toast.success('Message deleted');
             }
         } catch (error) {
@@ -155,7 +166,7 @@ const ChatBot = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold dark:text-white">Recent Chats</h2>
-                            <p className="text-gray-500 text-xs text-balance">Resume your conversations.</p>
+                            <p className="text-gray-500 text-xs">Separate conversational threads.</p>
                         </div>
                     </div>
 
@@ -168,8 +179,8 @@ const ChatBot = () => {
 
                     <div className="flex items-center justify-between mb-4 px-1">
                         <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">History</h3>
-                        {history.length > 0 && (
-                            <button 
+                        {history.length > 100 && (
+                             <button 
                                 onClick={clearAllHistory}
                                 className="text-[9px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest flex items-center gap-1 transition-colors"
                             >
@@ -179,37 +190,41 @@ const ChatBot = () => {
                     </div>
 
                     <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
-                        {history.length > 0 ? history.map((item) => (
-                            <div 
-                                key={item.id}
-                                onClick={() => selectSession(item)}
-                                className={`p-4 rounded-xl group cursor-pointer relative transition-all border ${
-                                    activeSessionId === item.id 
-                                    ? 'bg-primary/5 border-primary shadow-sm' 
-                                    : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-100 dark:hover:border-gray-800'
-                                }`}
-                            >
-                                <div className="flex items-start gap-3 pr-8">
-                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${activeSessionId === item.id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'}`}>
-                                         <MessageSquare className="w-3 h-3" />
+                        {history.length > 0 ? history.map((item) => {
+                            const isSelected = activeThreadId === item.thread_id || (!activeThreadId && !item.thread_id && false); // Simplified check
+                            
+                            return (
+                                <div 
+                                    key={item.id}
+                                    onClick={() => selectThread(item)}
+                                    className={`p-4 rounded-xl group cursor-pointer relative transition-all border ${
+                                        activeThreadId && activeThreadId === item.thread_id
+                                        ? 'bg-primary/5 border-primary shadow-sm' 
+                                        : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-100 dark:hover:border-gray-800'
+                                    }`}
+                                >
+                                    <div className="flex items-start gap-3 pr-8">
+                                        <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${activeThreadId === item.thread_id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                                             <MessageSquare className="w-3 h-3" />
+                                        </div>
+                                        <p className={`text-xs line-clamp-2 leading-relaxed font-medium ${activeThreadId === item.thread_id ? 'text-primary' : 'text-gray-600 dark:text-gray-400'}`}>
+                                            {item.prompt}
+                                        </p>
                                     </div>
-                                    <p className={`text-xs line-clamp-2 leading-relaxed font-medium ${activeSessionId === item.id ? 'text-primary' : 'text-gray-600 dark:text-gray-400'}`}>
-                                        {item.prompt}
-                                    </p>
+                                    <div className="flex justify-between items-center mt-2 pl-9">
+                                        <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">
+                                            {new Date(item.created_at).toLocaleDateString()}
+                                        </span>
+                                        <button 
+                                            onClick={(e) => deleteHistoryItem(item.id, e)}
+                                            className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all"
+                                        >
+                                            <Trash className="w-3 h-3" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center mt-2 pl-9">
-                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">
-                                        {new Date(item.created_at).toLocaleDateString()}
-                                    </span>
-                                    <button 
-                                        onClick={(e) => deleteHistoryItem(item.id, e)}
-                                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all"
-                                    >
-                                        <Trash className="w-3 h-3" />
-                                    </button>
-                                </div>
-                            </div>
-                        )) : (
+                            );
+                        }) : (
                             <div className="flex flex-col items-center justify-center py-10 opacity-10">
                                 <History className="w-12 h-12 mb-2" />
                                 <p className="text-xs font-bold uppercase">Empty</p>
@@ -230,9 +245,9 @@ const ChatBot = () => {
                             <div>
                                 <h3 className="font-bold text-sm dark:text-gray-200">Nero Studio</h3>
                                 <div className="flex items-center gap-1.5">
-                                    <div className={`w-1.5 h-1.5 rounded-full ${activeSessionId ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${activeThreadId ? 'bg-amber-500' : 'bg-green-500'}`}></div>
                                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
-                                        {activeSessionId ? 'Resumed Thread' : 'Neural Stream Active'}
+                                        {activeThreadId ? 'Resumed Thread' : 'New Neural Stream'}
                                     </span>
                                 </div>
                             </div>
@@ -295,7 +310,7 @@ const ChatBot = () => {
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder={activeSessionId ? "Continue your conversation..." : "Ask something new..."}
+                                    placeholder={activeThreadId ? "Continue this thread..." : "Start a new conversation..."}
                                     className="flex-1 bg-transparent dark:text-white px-6 py-5 outline-none text-sm font-medium"
                                     disabled={loading}
                                 />
