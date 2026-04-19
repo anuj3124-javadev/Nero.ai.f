@@ -6,7 +6,12 @@ const Footer = () => {
     <footer className="px-6 md:px-16 lg:px-24 xl:px-32 pt-8 w-full text-gray-500">
     <div className="flex flex-col md:flex-row justify-between w-full gap-10 border-b border-gray-500/30 pb-6">
         <div className="md:max-w-96">
-            <img className="h-9" src={assets.logo} alt='logo'/>
+            <div className='flex items-center gap-2 mb-6 cursor-pointer group'>
+              <div className='w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover:scale-110'>
+                N
+              </div>
+              <span className='font-bold text-xl tracking-tight dark:text-white'>Nero<span className='text-primary'>.ai</span></span>
+            </div>
             <p className="mt-6 text-sm">
                 Experience the power of AI with Nero AI. <br /> Transform your
                 content creation with our suite of premium AI tools. Write 
