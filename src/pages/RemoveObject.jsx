@@ -1,4 +1,4 @@
-import { Scissors, Sparkles, Download } from "lucide-react";
+import { Scissors, Sparkles, Download, Image } from "lucide-react";
 import React, { useState } from "react";
 import toast from "react-hot-toast";
 import axios from "../lib/axiosInstance";
@@ -105,7 +105,7 @@ const RemoveObject = () => {
                     </div>
                   ) : (
                     <>
-                      <ImageIcon className="w-8 h-8 text-gray-300 mb-2" />
+                      <Image className="w-8 h-8 text-gray-300 mb-2" />
                       <p className="text-xs font-medium text-gray-500 text-center">Click to upload JPG, PNG</p>
                     </>
                   )}
@@ -166,7 +166,7 @@ const RemoveObject = () => {
             <div className="flex-1 p-6 relative flex items-center justify-center bg-gray-50/30 dark:bg-gray-950/30">
               {!content ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center text-gray-400 opacity-30 select-none">
-                  <ImageIcon className="w-20 h-20 mb-4" />
+                  <Image className="w-20 h-20 mb-4" />
                   <p className="text-sm font-medium">Result will appear here</p>
                 </div>
               ) : (
