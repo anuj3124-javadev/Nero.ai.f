@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import toast from "react-hot-toast";
 import axios from "../lib/axiosInstance";
 import { useAuth } from "@clerk/clerk-react";
+import Markdown from "react-markdown";
 
 const ReviewResume = () => {
   const [input, setInput] = useState("");
@@ -125,8 +126,8 @@ const ReviewResume = () => {
                   <p className="text-sm font-medium">Analysis will appear here</p>
                 </div>
               ) : (
-                <div className="prose prose-sm dark:prose-invert max-w-none animate-in fade-in slide-in-from-bottom-4 duration-700 whitespace-pre-wrap text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                  {content}
+                <div className="prose prose-sm dark:prose-invert max-w-none animate-in fade-in slide-in-from-bottom-4 duration-700 leading-relaxed">
+                  <Markdown>{content}</Markdown>
                 </div>
               )}
 

@@ -12,11 +12,13 @@ import {
   Users,
   CreditCard,
   Sparkles,
+  MessageSquare
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
 const navItems = [
   { to: "/ai", label: "DashBoard", Icon: House },
+  { to: "/ai/chatbot", label: "AI Chatbot", Icon: MessageSquare },
   { to: "/ai/write-article", label: "Write Article", Icon: SquarePen },
   { to: "/ai/blog-titles", label: "Blog Titles", Icon: Hash },
   { to: "/ai/image-generator", label: "Image Studio", Icon: Sparkles },
@@ -51,17 +53,23 @@ const Sidebar = ({ sidebar, setSidebar }) => {
               to={to}
               end={to === "/ai"}
               onClick={() => setSidebar(false)}
-              className={({ isActive }) => `px-3.5 py-2.5 flex 
-            items-center gap-3 rounded ${
+              className={({ isActive }) => `relative group px-4 py-2.5 flex items-center gap-3 rounded-xl transition-all duration-300 ${
               isActive
-                ? "bg-gradient-to-r from-[#f63cf3] to-[#34aaea] text-white"
-                : ""
+                ? "bg-gradient-to-r from-primary to-indigo-600 text-white shadow-lg shadow-primary/20"
+                : "text-gray-500 hover:text-primary"
             }`}
             >
               {({ isActive }) => (
                 <>
-                  <Icon className={`w-4 h-4 ${isActive ? "text-white" : ""}`} />
-                  {label}
+                  {/* Hover Highlight Animation */}
+                  {!isActive && (
+                    <div className="absolute inset-0 bg-primary/5 rounded-xl scale-95 opacity-0 group-hover:opacity-100 group-hover:scale-100 transition-all duration-300" />
+                  )}
+                  
+                  <Icon className={`w-4 h-4 transition-transform duration-300 group-hover:scale-110 ${isActive ? "text-white" : "text-gray-400 group-hover:text-primary"}`} />
+                  <span className="relative z-10 transition-transform duration-300 group-hover:translate-x-1">
+                    {label}
+                  </span>
                 </>
               )}
             </NavLink>

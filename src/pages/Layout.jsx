@@ -36,8 +36,8 @@ const Layout = () => {
         <div className="sticky top-14 h-[calc(100vh-56px)] z-10">
           <Sidebar sidebar={sidebar} setSidebar={setSidebar}/>
         </div>
-        <div className='flex-1 bg-[#F4F7FB] dark:bg-gray-950 min-h-screen'>
-          <div className="pb-20">
+        <div className='flex-1 bg-[#F4F7FB] dark:bg-gray-950 min-h-screen pt-4'>
+          <div className="pb-20 px-4">
             <Outlet/>
           </div>
         </div>

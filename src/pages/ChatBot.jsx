@@ -1,0 +1,301 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { MessageSquare, Send, User, Bot, Plus, Trash2, Sparkles, History, X, ChevronLeft, Trash } from 'lucide-react';
+import axios from '../lib/axiosInstance';
+import { useAuth } from '@clerk/clerk-react';
+import toast from 'react-hot-toast';
+import Markdown from "react-markdown";
+
+const ChatBot = () => {
+    const [messages, setMessages] = useState([
+        { role: 'assistant', content: 'Hello! I am Nero AI. How can I assist you today?' }
+    ]);
+    const [history, setHistory] = useState([]);
+    const [input, setInput] = useState('');
+    const [loading, setLoading] = useState(false);
+    const { getToken } = useAuth();
+    const chatEndRef = useRef(null);
+    const isInitialMount = useRef(true);
+
+    const scrollToBottom = (behavior = 'smooth') => {
+        chatEndRef.current?.scrollIntoView({ behavior });
+    };
+
+    const fetchHistory = async () => {
+        try {
+            const token = await getToken();
+            const { data } = await axios.get('/api/ai/chat-history', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (data.success) {
+                setHistory(data.history.reverse());
+                const historyMessages = [];
+                data.history.forEach(item => {
+                    historyMessages.push({ role: 'user', content: item.prompt });
+                    historyMessages.push({ role: 'assistant', content: item.content });
+                });
+                
+                if (messages.length <= 1 && data.history.length > 0) {
+                    setMessages([{ role: 'assistant', content: 'Hello! I am Nero AI. How can I assist you today?' }, ...historyMessages]);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching chat history:', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchHistory();
+    }, []);
+
+    useEffect(() => {
+        if (isInitialMount.current) {
+            scrollToBottom('auto');
+            isInitialMount.current = false;
+        } else {
+            scrollToBottom('smooth');
+        }
+    }, [messages]);
+
+    const handleSend = async (e) => {
+        e.preventDefault();
+        if (!input.trim() || loading) return;
+
+        const userMsg = { role: 'user', content: input };
+        setMessages(prev => [...prev, userMsg]);
+        setInput('');
+        setLoading(true);
+
+        try {
+            const token = await getToken();
+            const { data } = await axios.post('/api/ai/chat', 
+                { messages: [...messages, userMsg] },
+                { headers: { Authorization: `Bearer ${token}` } }
+            );
+
+            if (data.success) {
+                setMessages(prev => [...prev, { role: 'assistant', content: data.content }]);
+                fetchHistory(); 
+            } else {
+                toast.error(data.message);
+            }
+        } catch (error) {
+            toast.error('Failed to get a response. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const startNewChat = () => {
+        setMessages([{ role: 'assistant', content: 'New session started. How can I help you now?' }]);
+        toast.success('New chat started');
+    };
+
+    const clearAllHistory = async () => {
+        if (!window.confirm("Are you sure you want to clear your entire chat history?")) return;
+        try {
+            const token = await getToken();
+            const { data } = await axios.delete('/api/ai/chat-history', {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (data.success) {
+                setHistory([]);
+                setMessages([{ role: 'assistant', content: 'History cleared. How can I help you now?' }]);
+                toast.success('History cleared');
+            }
+        } catch (error) {
+            toast.error('Failed to clear history');
+        }
+    };
+
+    const deleteHistoryItem = async (id, e) => {
+        e.stopPropagation();
+        try {
+            const token = await getToken();
+            const { data } = await axios.delete(`/api/ai/chat-item/${id}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (data.success) {
+                setHistory(prev => prev.filter(item => item.id !== id));
+                toast.success('Message deleted');
+            }
+        } catch (error) {
+            toast.error('Failed to delete message');
+        }
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto p-4 sm:p-6 pb-20">
+            <div className="flex flex-col xl:flex-row gap-8 items-start h-full">
+                
+                {/* Left Column: Recent Chats Sidebar Card */}
+                <div className="w-full xl:w-[350px] flex-shrink-0 bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 p-6 sm:p-8 flex flex-col h-auto xl:h-[calc(100vh-160px)]">
+                    <div className="flex items-center gap-3 mb-8">
+                        <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900/50 text-indigo-600 flex items-center justify-center">
+                            <History className="w-5 h-5" />
+                        </div>
+                        <div>
+                            <h2 className="text-xl font-bold dark:text-white">Recent Chats</h2>
+                            <p className="text-gray-500 text-xs">Your conversation history.</p>
+                        </div>
+                    </div>
+
+                    <button 
+                        onClick={startNewChat}
+                        className="w-full flex items-center justify-center gap-3 px-4 py-3 bg-primary text-white rounded-2xl font-bold text-sm hover:opacity-90 transition-all active:scale-[0.98] shadow-lg shadow-primary/20 mb-6"
+                    >
+                        <Plus className="w-4 h-4" /> New Conversation
+                    </button>
+
+                    <div className="flex items-center justify-between mb-4 px-1">
+                        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">History</h3>
+                        {history.length > 0 && (
+                            <button 
+                                onClick={clearAllHistory}
+                                className="text-[9px] font-bold text-red-500 hover:text-red-700 uppercase tracking-widest flex items-center gap-1 transition-colors"
+                            >
+                                <Trash2 className="w-3 h-3" /> Clear All
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 divide-y dark:divide-gray-800">
+                        {history.length > 0 ? history.map((item) => (
+                            <div 
+                                key={item.id}
+                                className="py-4 first:pt-0 group cursor-pointer relative"
+                            >
+                                <div className="flex items-start gap-3 pr-8">
+                                    <div className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center flex-shrink-0">
+                                         <MessageSquare className="w-3 h-3 text-gray-400" />
+                                    </div>
+                                    <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed font-medium">
+                                        {item.prompt}
+                                    </p>
+                                </div>
+                                <div className="flex justify-between items-center mt-2 pl-9">
+                                    <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight">
+                                        {new Date(item.created_at).toLocaleDateString()}
+                                    </span>
+                                    <button 
+                                        onClick={(e) => deleteHistoryItem(item.id, e)}
+                                        className="opacity-0 group-hover:opacity-100 p-1 text-gray-300 hover:text-red-500 transition-all"
+                                    >
+                                        <Trash className="w-3 h-3" />
+                                    </button>
+                                </div>
+                            </div>
+                        )) : (
+                            <div className="flex flex-col items-center justify-center py-10 opacity-10">
+                                <History className="w-12 h-12 mb-2" />
+                                <p className="text-xs font-bold uppercase">Empty</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* Right Column: Chat Main Card */}
+                <div className="flex-1 w-full bg-white dark:bg-gray-950 rounded-3xl shadow-sm border dark:border-gray-800 flex flex-col h-[calc(100vh-160px)]">
+                    
+                    {/* Header */}
+                    <div className="p-5 border-b dark:border-gray-800 flex items-center justify-between bg-gray-50/30 dark:bg-gray-900/30">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-900/30 flex items-center justify-center">
+                                <Sparkles className="w-5 h-5 text-primary rotate-12" />
+                            </div>
+                            <div>
+                                <h3 className="font-bold text-sm dark:text-gray-200">Nero Studio</h3>
+                                <div className="flex items-center gap-1.5">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Neural Stream Active</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Chat Area */}
+                    <div className="flex-1 overflow-y-auto px-6 py-8 space-y-8 custom-scrollbar scroll-smooth">
+                        {messages.map((msg, index) => (
+                            <div 
+                                key={index} 
+                                className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'} group`}
+                            >
+                                <div className={`flex gap-4 max-w-[90%] sm:max-w-[80%] ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                    <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-sm transition-transform group-hover:scale-105 ${
+                                        msg.role === 'user' 
+                                        ? 'bg-gradient-to-br from-primary to-indigo-700' 
+                                        : 'bg-white dark:bg-gray-900 border dark:border-gray-800'
+                                    }`}>
+                                        {msg.role === 'user' 
+                                            ? <User className="w-4 h-4 sm:w-5 sm:h-5 text-white" /> 
+                                            : <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                                        }
+                                    </div>
+
+                                    <div className={`relative p-5 rounded-3xl shadow-sm leading-relaxed text-sm ${
+                                        msg.role === 'user' 
+                                        ? 'bg-primary text-white rounded-tr-none' 
+                                        : 'bg-white dark:bg-gray-900 dark:text-gray-200 border dark:border-gray-800 rounded-tl-none'
+                                    }`}>
+                                        <div className={`prose prose-sm ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'} max-w-none font-medium`}>
+                                            <Markdown>{msg.content}</Markdown>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                        {loading && (
+                            <div className="flex justify-start">
+                                <div className="flex gap-4">
+                                    <div className="w-10 h-10 rounded-2xl bg-white dark:bg-gray-900 border dark:border-gray-800 flex items-center justify-center">
+                                        <Sparkles className="w-5 h-5 text-primary animate-pulse" />
+                                    </div>
+                                    <div className="bg-white dark:bg-gray-900 p-5 rounded-3xl border dark:border-gray-800 rounded-tl-none flex items-center gap-1.5 shadow-sm">
+                                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce"></span>
+                                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:0.2s]"></span>
+                                        <span className="w-2 h-2 bg-primary/40 rounded-full animate-bounce [animation-delay:0.4s]"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                        <div ref={chatEndRef} />
+                    </div>
+
+                    {/* Input Bar */}
+                    <div className="p-6 border-t dark:border-gray-800 bg-gray-50/30 dark:bg-gray-900/30">
+                        <form onSubmit={handleSend} className="relative max-w-4xl mx-auto group">
+                            <div className="relative flex items-center bg-white dark:bg-gray-950 border-2 dark:border-gray-800 focus-within:border-primary/50 rounded-2xl overflow-hidden shadow-sm transition-all">
+                                <input
+                                    type="text"
+                                    value={input}
+                                    onChange={(e) => setInput(e.target.value)}
+                                    placeholder="Type a message..."
+                                    className="flex-1 bg-transparent dark:text-white px-6 py-5 outline-none text-sm font-medium"
+                                    disabled={loading}
+                                />
+                                <div className="px-4">
+                                    <button
+                                        type="submit"
+                                        disabled={!input.trim() || loading}
+                                        className={`w-12 h-12 flex items-center justify-center rounded-xl transition-all ${
+                                            input.trim() && !loading
+                                            ? 'bg-primary text-white shadow-lg'
+                                            : 'bg-gray-200 dark:bg-gray-800 text-gray-400'
+                                        }`}
+                                    >
+                                        <Send className="w-5 h-5" />
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                        <p className="text-[10px] text-center text-gray-400 mt-4 font-bold uppercase tracking-[0.2em] opacity-50">Nero Intelligence v4.0 Active</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default ChatBot;

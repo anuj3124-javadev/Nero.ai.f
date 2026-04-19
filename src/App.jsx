@@ -11,6 +11,7 @@ import RemoveObject from "./pages/RemoveObject";
 import ReviewResume from "./pages/ReviewResume";
 import Community from "./pages/Community";
 import ImageGenerator from "./pages/user/ImageGenerator";
+import ChatBot from "./pages/ChatBot";
 import { Toaster } from "react-hot-toast";
 import { LoaderOne } from "./components/ui/loader";
 
@@ -31,6 +32,7 @@ const App = () => {
         <Route path="/" element={<Home />} />
         <Route path="/ai" element={<Layout />}>
           <Route index element={<Dashboard />} />
+          <Route path="chatbot" element={<ChatBot />} />
           <Route path="write-article" element={<WriteArticle />} />
           <Route path="blog-titles" element={<BlogTitles />} />
           <Route path="remove-background" element={<RemoveBackground />} />
