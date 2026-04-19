@@ -10,8 +10,10 @@ const ChatBot = () => {
         { role: 'assistant', content: 'Hello! I am Nero AI. How can I assist you today?' }
     ]);
     const [history, setHistory] = useState([]);
+    const [rawHistory, setRawHistory] = useState([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [activeSessionId, setActiveSessionId] = useState(null);
     const { getToken } = useAuth();
     const chatEndRef = useRef(null);
     const isInitialMount = useRef(true);
@@ -28,16 +30,8 @@ const ChatBot = () => {
             });
 
             if (data.success) {
-                setHistory(data.history.reverse());
-                const historyMessages = [];
-                data.history.forEach(item => {
-                    historyMessages.push({ role: 'user', content: item.prompt });
-                    historyMessages.push({ role: 'assistant', content: item.content });
-                });
-                
-                if (messages.length <= 1 && data.history.length > 0) {
-                    setMessages([{ role: 'assistant', content: 'Hello! I am Nero AI. How can I assist you today?' }, ...historyMessages]);
-                }
+                setRawHistory(data.history); // Keep original order for filtering
+                setHistory([...data.history].reverse()); // Newest first for sidebar
             }
         } catch (error) {
             console.error('Error fetching chat history:', error);
@@ -57,19 +51,38 @@ const ChatBot = () => {
         }
     }, [messages]);
 
+    const selectSession = (selectedItem) => {
+        setActiveSessionId(selectedItem.id);
+        
+        // Find all history items up to and including the selected one
+        const sessionMessages = [];
+        for (const item of rawHistory) {
+            sessionMessages.push({ role: 'user', content: item.prompt });
+            sessionMessages.push({ role: 'assistant', content: item.content });
+            if (item.id === selectedItem.id) break;
+        }
+
+        setMessages([
+            { role: 'assistant', content: 'Continuing conversation from history...' },
+            ...sessionMessages
+        ]);
+        toast.success('Session reloaded');
+    };
+
     const handleSend = async (e) => {
         e.preventDefault();
         if (!input.trim() || loading) return;
 
         const userMsg = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMsg]);
+        const newMessages = [...messages, userMsg];
+        setMessages(newMessages);
         setInput('');
         setLoading(true);
 
         try {
             const token = await getToken();
             const { data } = await axios.post('/api/ai/chat', 
-                { messages: [...messages, userMsg] },
+                { messages: newMessages },
                 { headers: { Authorization: `Bearer ${token}` } }
             );
 
@@ -88,6 +101,7 @@ const ChatBot = () => {
 
     const startNewChat = () => {
         setMessages([{ role: 'assistant', content: 'New session started. How can I help you now?' }]);
+        setActiveSessionId(null);
         toast.success('New chat started');
     };
 
@@ -100,8 +114,9 @@ const ChatBot = () => {
             });
 
             if (data.success) {
+                setRawHistory([]);
                 setHistory([]);
-                setMessages([{ role: 'assistant', content: 'History cleared. How can I help you now?' }]);
+                startNewChat();
                 toast.success('History cleared');
             }
         } catch (error) {
@@ -119,6 +134,8 @@ const ChatBot = () => {
 
             if (data.success) {
                 setHistory(prev => prev.filter(item => item.id !== id));
+                setRawHistory(prev => prev.filter(item => item.id !== id));
+                if (activeSessionId === id) setActiveSessionId(null);
                 toast.success('Message deleted');
             }
         } catch (error) {
@@ -138,7 +155,7 @@ const ChatBot = () => {
                         </div>
                         <div>
                             <h2 className="text-xl font-bold dark:text-white">Recent Chats</h2>
-                            <p className="text-gray-500 text-xs">Your conversation history.</p>
+                            <p className="text-gray-500 text-xs text-balance">Resume your conversations.</p>
                         </div>
                     </div>
 
@@ -161,22 +178,27 @@ const ChatBot = () => {
                         )}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 divide-y dark:divide-gray-800">
+                    <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2">
                         {history.length > 0 ? history.map((item) => (
                             <div 
                                 key={item.id}
-                                className="py-4 first:pt-0 group cursor-pointer relative"
+                                onClick={() => selectSession(item)}
+                                className={`p-4 rounded-xl group cursor-pointer relative transition-all border ${
+                                    activeSessionId === item.id 
+                                    ? 'bg-primary/5 border-primary shadow-sm' 
+                                    : 'border-transparent hover:bg-gray-50 dark:hover:bg-gray-900 hover:border-gray-100 dark:hover:border-gray-800'
+                                }`}
                             >
                                 <div className="flex items-start gap-3 pr-8">
-                                    <div className="w-6 h-6 rounded-lg bg-gray-50 dark:bg-gray-900 flex items-center justify-center flex-shrink-0">
-                                         <MessageSquare className="w-3 h-3 text-gray-400" />
+                                    <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${activeSessionId === item.id ? 'bg-primary text-white' : 'bg-gray-100 dark:bg-gray-800'}`}>
+                                         <MessageSquare className="w-3 h-3" />
                                     </div>
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 line-clamp-2 leading-relaxed font-medium">
+                                    <p className={`text-xs line-clamp-2 leading-relaxed font-medium ${activeSessionId === item.id ? 'text-primary' : 'text-gray-600 dark:text-gray-400'}`}>
                                         {item.prompt}
                                     </p>
                                 </div>
                                 <div className="flex justify-between items-center mt-2 pl-9">
-                                    <span className="text-[9px] text-gray-300 font-bold uppercase tracking-tight">
+                                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-tight">
                                         {new Date(item.created_at).toLocaleDateString()}
                                     </span>
                                     <button 
@@ -208,8 +230,10 @@ const ChatBot = () => {
                             <div>
                                 <h3 className="font-bold text-sm dark:text-gray-200">Nero Studio</h3>
                                 <div className="flex items-center gap-1.5">
-                                    <div className="w-1.5 h-1.5 rounded-full bg-green-500"></div>
-                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Neural Stream Active</span>
+                                    <div className={`w-1.5 h-1.5 rounded-full ${activeSessionId ? 'bg-amber-500' : 'bg-green-500'}`}></div>
+                                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">
+                                        {activeSessionId ? 'Resumed Thread' : 'Neural Stream Active'}
+                                    </span>
                                 </div>
                             </div>
                         </div>
@@ -239,7 +263,7 @@ const ChatBot = () => {
                                         ? 'bg-primary text-white rounded-tr-none' 
                                         : 'bg-white dark:bg-gray-900 dark:text-gray-200 border dark:border-gray-800 rounded-tl-none'
                                     }`}>
-                                        <div className={`prose prose-sm ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'} max-w-none font-medium`}>
+                                        <div className={`prose prose-sm ${msg.role === 'user' ? 'prose-invert' : 'dark:prose-invert'} max-w-none font-medium text-balance`}>
                                             <Markdown>{msg.content}</Markdown>
                                         </div>
                                     </div>
@@ -271,7 +295,7 @@ const ChatBot = () => {
                                     type="text"
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
-                                    placeholder="Type a message..."
+                                    placeholder={activeSessionId ? "Continue your conversation..." : "Ask something new..."}
                                     className="flex-1 bg-transparent dark:text-white px-6 py-5 outline-none text-sm font-medium"
                                     disabled={loading}
                                 />
@@ -290,7 +314,7 @@ const ChatBot = () => {
                                 </div>
                             </div>
                         </form>
-                        <p className="text-[10px] text-center text-gray-400 mt-4 font-bold uppercase tracking-[0.2em] opacity-50">Nero Intelligence v4.0 Active</p>
+                        <p className="text-[10px] text-center text-gray-400 mt-4 font-bold uppercase tracking-[0.2em] opacity-50">Context memory enabled</p>
                     </div>
                 </div>
             </div>
