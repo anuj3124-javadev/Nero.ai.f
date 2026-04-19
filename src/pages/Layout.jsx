@@ -1,60 +1,93 @@
 import React, { useState } from 'react'
 import { Outlet, useNavigate } from 'react-router-dom'
-import { assets } from '../assets/assets'
-import { Menu,  X } from 'lucide-react'
+import { Menu, X, LayoutDashboard } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
-import { SignIn,useUser } from '@clerk/clerk-react'
+import { SignIn, useUser } from '@clerk/clerk-react'
 import ThemeToggle from '../components/theme/ThemeToggle'
+import { assets } from '../assets/assets'
 
 const Layout = () => {
   const navigate = useNavigate()
-  const [sidebar, setSidebar] = useState(false)
-  const {user} = useUser()
-  return user ?(
-    <div className='flex flex-col items-start justify-start min-h-screen bg-white dark:bg-gray-900 transition-colors duration-300'>
-      <nav className='w-full px-8 min-h-14 flex items-center justify-between
-      border-b border-gray-200 dark:border-gray-800 transition-colors duration-300 sticky top-0 z-20 bg-white/80 dark:bg-gray-900/80 backdrop-blur-md'>
-        <div 
-          className='flex items-center gap-2 cursor-pointer group'
-          onClick={()=>navigate("/")}
-        >
-          <div className='w-8 h-8 rounded-lg bg-primary flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-200 dark:shadow-none transition-transform group-hover:scale-110'>
-            N
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { user } = useUser()
+
+  if (!user) {
+    return (
+      <div className='flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-950 px-4'>
+        <div className="w-full max-w-md">
+           <div 
+            className='flex items-center justify-center gap-2 cursor-pointer group mb-8 scale-110'
+            onClick={()=>navigate("/")}
+           >
+            <div className='w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-indigo-500/20'>
+              N
+            </div>
+            <span className='font-bold text-2xl tracking-tighter dark:text-white'>Nero<span className='text-indigo-600'>.ai</span></span>
           </div>
-          <span className='font-bold text-xl tracking-tight dark:text-white'>Nero<span className='text-primary'>.ai</span></span>
-        </div>
-        
-        <div className='flex items-center gap-4'>
-          <ThemeToggle />
-          {
-            sidebar ?<X onClick={()=> setSidebar(false)} className='w-6 h-6 text-gray-600 dark:text-gray-400 sm:hidden'/>
-            : <Menu onClick={()=> setSidebar(true)} className='w-6 h-6 text-gray-600 dark:text-gray-400 sm:hidden'/>
-          }
-        </div>
-      </nav>
-      <div className='flex-1 w-full flex relative'>
-        {/* Mobile Sidebar Backdrop */}
-        {sidebar && (
-          <div 
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 sm:hidden"
-            onClick={() => setSidebar(false)}
-          />
-        )}
-        
-        <div className="sticky top-14 h-[calc(100vh-56px)] z-40">
-          <Sidebar sidebar={sidebar} setSidebar={setSidebar}/>
-        </div>
-        <div className='flex-1 bg-[#F4F7FB] dark:bg-gray-950 min-h-screen pt-4'>
-          <div className="pb-20 px-4">
-            <Outlet/>
-          </div>
+          <SignIn />
         </div>
       </div>
+    )
+  }
+
+  return (
+    <div className='flex h-screen bg-gray-50 dark:bg-gray-950 transition-colors duration-500 overflow-hidden font-inter'>
       
-    </div>
-  ) : (
-    <div className='flex items-center justify-center h-screen'>
-      <SignIn/>
+      {/* Sidebar - Desktop Sticky / Mobile Drawer */}
+      <Sidebar sidebarOpen={sidebarOpen} setSidebarOpen={setSidebarOpen} />
+
+      {/* Main Content Area */}
+      <div className='flex-1 flex flex-col min-w-0 overflow-hidden relative'>
+        
+        {/* Workspace Header */}
+        <header className='h-16 flex items-center justify-between px-6 sm:px-10 border-b border-gray-200 dark:border-gray-800 bg-white/80 dark:bg-gray-950/80 backdrop-blur-xl z-20 shrink-0'>
+          <div className='flex items-center gap-4'>
+            <button 
+              onClick={() => setSidebarOpen(true)}
+              className='p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-xl transition-colors lg:hidden'
+            >
+              <Menu className='w-5 h-5 text-gray-600 dark:text-gray-400' />
+            </button>
+            <div className='hidden sm:flex items-center gap-2 text-gray-400 dark:text-gray-600'>
+               <LayoutDashboard className='w-4 h-4' />
+               <span className='text-[10px] font-black uppercase tracking-[0.2em]'>Internal Laboratory</span>
+            </div>
+          </div>
+
+          <div className='flex items-center gap-5'>
+            <ThemeToggle />
+            <div 
+              className='flex items-center gap-2 cursor-pointer group lg:hidden'
+              onClick={()=>navigate("/")}
+            >
+              <div className='w-7 h-7 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-md'>
+                N
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Scrollable Workspace */}
+        <main className='flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar bg-[#FDFDFE] dark:bg-gray-950 relative'>
+          {/* Subtle Background Elements */}
+          <div className="absolute top-0 left-0 w-full h-64 bg-gradient-to-b from-indigo-50/20 dark:from-indigo-900/5 to-transparent pointer-events-none" />
+          
+          <div className='max-w-[1600px] mx-auto p-4 sm:p-8 lg:p-10'>
+            <Outlet />
+          </div>
+
+          {/* Bottom Padding for Mobile */}
+          <div className="h-20 lg:hidden" />
+        </main>
+      </div>
+
+      {/* Overlay for Mobile Sidebar */}
+      {sidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-gray-950/40 backdrop-blur-sm z-[45] lg:hidden transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   )
 }
